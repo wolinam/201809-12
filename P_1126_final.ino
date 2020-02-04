@@ -1,0 +1,188 @@
+#include <SoftwareSerial.h>
+
+//#define PRT_DIST
+//#define PRT_SENSOR
+//#define PRT_CMD
+
+//적외선
+int s1 = A0;
+//int s2 = A2;
+int s3 = A1;
+
+//모터
+int lm1 = 5;
+int lm2 = 6;
+int rm1 = 9;
+int rm2 = 10;
+
+//블루투스
+int RX = 3;
+int TX = 2;
+
+/*led
+  int red = A3;
+  int green = A4;
+  int blue = 11;
+*/
+//초음파
+int trig = 4;
+int echo = A5;
+SoftwareSerial BTSerial(TX, RX);
+
+//피에조
+int piezo = 13;
+int freq = 1000;
+
+void setup() {
+  for (int i = 4; i <= 6; i++) {
+    pinMode(i, OUTPUT);
+  }
+  pinMode(A0, INPUT);
+  pinMode(A1, INPUT);
+  //  pinMode(A2, INPUT);
+  //  pinMode(A3, INPUT);
+  //  pinMode(A4, INPUT);
+  pinMode(A5, INPUT);
+  pinMode(9, OUTPUT);
+  pinMode(10, OUTPUT);
+  pinMode(13, OUTPUT);
+  Serial.begin(9600); //시리얼
+  BTSerial.begin(9600);
+}
+
+void loop() {
+  //초음파
+  float duration, distance;
+  int a, b, c;
+  digitalWrite(trig, HIGH);
+  delay(10);
+  digitalWrite(trig, LOW);
+  //거리계산
+  duration = pulseIn(echo, HIGH);
+  distance = ((float)(340 * duration) / 10000) / 2;
+
+  //장애물감지 후 멈춤
+  if (distance <= 30) {
+    motor_control(0, 0, 0, 0);
+  }
+
+#ifdef PRT_DIST
+  //거리출력
+  Serial.print("Duration: ");
+  Serial.println(duration);
+  Serial.print("Distance: ");
+  Serial.println(distance);
+  delay(500);
+#endif
+
+  //적외선센서 입력값 저장
+  a = analogRead(s1);
+  //  b = analogRead(s2);
+  c = analogRead(s3);
+
+#ifdef PRT_SENSOR
+  Serial.print("s1 =");
+  Serial.println(a);
+  delay(500);
+  Serial.print("s2 =");
+  Serial.println(b);
+  delay(500);
+  Serial.print("s3 =");
+  Serial.println(c);
+  delay(500);
+#endif
+
+  //라인트레이서
+  if (BTSerial.available()) {
+    switch (BTSerial.read()) {
+      case'F':
+        motor_control(215, 0, 215, 0);
+        Serial.println("go");
+        //        color(0, 255, 255);
+        break;
+
+      case'B':
+        motor_control(0, 255, 0, 255);
+        Serial.println("back");
+        break;
+
+      case'L':
+        motor_control(0, 100, 215, 0);
+        Serial.println("left");
+        break;
+
+      case'R':
+        motor_control(215, 0, 0, 100);
+        Serial.println("right");
+        break;
+
+      case'S':
+        motor_control(0, 0, 0, 0);
+        Serial.println("stop");
+        break;
+    }
+
+
+    //in white
+    if ((a < 110) && (b < 110) && (c < 110)) {
+      motor_control(0, 255, 0, 255);
+#ifdef PRT_CMD
+      Serial.println("BACK");
+#endif
+    }
+
+
+    //right
+    if ((a > 920) && (b > 920) && (c < 135)) {
+      motor_control(215, 0, 0, 100);
+#ifdef PRT_CMD
+      Serial.println("RIGHT");
+#endif
+    }
+
+
+    if ((a > 920) && (b < 135) && (c < 135)) {
+      motor_control(215, 0, 0, 100);
+#ifdef PRT_CMD
+      Serial.println("RIGHT");
+#endif
+    }
+
+
+    //left
+    if ((a < 135) && (b > 920) && (c > 920)) {
+      motor_control(0, 100, 215, 0);
+#ifdef PRT_CMD
+      Serial.println("LEFT");
+#endif
+    }
+
+
+    //go
+    if ((a < 150) && (b > 920) && (c < 150)) {
+      motor_control(215, 0, 215, 0);
+      //      color(0, 255, 255);
+#ifdef PRT_CMD
+      Serial.println("GO");
+#endif
+    }
+    
+    if ((a > 920) && (b > 920) && (c > 920)) {
+      motor_control(215, 0, 215, 0);
+    }
+  }
+}
+
+void motor_control(int j1, int j2, int j3, int j4) {
+  analogWrite(lm1, j1);
+  analogWrite(lm2, j2);
+  analogWrite(rm1, j3);
+  analogWrite(rm2, j4);
+}
+/*
+  void color(int red, int green, int blue) {
+  analogWrite(A3, red);
+  analogWrite(A4, green);
+  analogWrite(11, blue);
+  }*/
+
